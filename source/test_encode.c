@@ -23,7 +23,7 @@ int main(int argc, char *argv[]){
 
 
     EncodeInfo encInfo;
-    uint img_size;
+    //uint img_size;
 
     // step 3: read and validate encode arguments
     if (read_and_validate_encode_args(argv, &encInfo) == e_failure){

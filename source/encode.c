@@ -2,6 +2,8 @@
 #include <string.h>
 #include "encode.h"
 #include "types.h"
+#include "common.h"
+#include <unistd.h>
 
 /* Function Definitions */
 
@@ -156,6 +158,7 @@ Status do_encoding(EncodeInfo *encInfo){
         fprintf(stderr, "ERROR: Capacity check failed\n");
         return e_failure;
     }
+    sleep(1);
     printf("INFO: Image Capacity = %u bytes, Secret File Size = %ld bytes\n", encInfo->image_capacity, encInfo->size_secret_file);
 
     // step 2: copy bmp image header
@@ -163,45 +166,83 @@ Status do_encoding(EncodeInfo *encInfo){
         fprintf(stderr, "ERROR: Copying BMP header failed\n");
         return e_failure;
     }
+    sleep(1);
     printf("INFO: BMP header copied successfully\n");
 
+    // step 3: encode magic string
+    if(encode_magic_string(MAGIC_STRING, encInfo) == e_failure){
+        fprintf(stderr, "ERROR: Encoding magic string failed\n");
+        return e_failure;
+    }
+    sleep(1);
+    printf("INFO: Magic string encoded successfully\n");
 
+    // step 4: encode secret file extension size
+
+    // step 5: encode secret file extension
+
+    
+    // step 6: encode secret file size
+    if(encode_secret_file_size(encInfo->size_secret_file, encInfo) == e_failure){
+        fprintf(stderr, "ERROR: Encoding secret file size failed\n");
+        return e_failure;
+    }
+    sleep(1);
+    printf("INFO: Secret file size encoded successfully\n");
+
+    // step 7: encode secret file data
+    if(encode_secret_file_data(encInfo) == e_failure){
+        fprintf(stderr, "ERROR: Encoding secret file data failed\n");
+        return e_failure;
+    }
+    sleep(1);
+    printf("INFO: Secret file data encoded successfully\n");
+
+    // step 8: copy remaining image data
+    if(copy_remaining_img_data(encInfo->fptr_src_image, encInfo->fptr_stego_image) == e_failure){
+        fprintf(stderr, "ERROR: Copying remaining image data failed\n");
+        return e_failure;
+    }
+    sleep(1);
+    printf("INFO: Remaining image data copied successfully\n");
     return e_success;
 }
 
 Status copy_bmp_header(FILE *fptr_src_image, FILE *fptr_dest_image){
     char header[54];
+    rewind(fptr_src_image);
+    rewind(fptr_dest_image);
     fread(header, sizeof(char), 54, fptr_src_image);
     fwrite(header, sizeof(char), 54, fptr_dest_image);
 
     return e_success;
 }
 
-Status encode_data_to_image(char *data, int size, FILE *fptr_src_image, FILE *fptr_stego_image){
-    // step 1: read size bytes from src image to buffer
-    char image_buffer[size];
-    fread(image_buffer, sizeof(char), size, fptr_src_image);
-
-    // step 2: encode data to image buffer
-    for (int i = 0; i < size; i++)
-    {
-        if (encode_byte_to_lsb(data[i], &image_buffer[i]) == e_failure)
-        {
-            fprintf(stderr, "ERROR: Encoding byte %d failed\n", i);
-            return e_failure;
-        }
+Status encode_data_to_image(const char *data, int size,FILE *fptr_src_image, FILE *fptr_stego_image){
+    // step 1: read size*8 bytes from src image
+    char image_buffer[size * 8];
+    size_t bytes_read = fread(image_buffer, sizeof(char), size * 8, fptr_src_image);
+    if (bytes_read < size * 8) {
+        fprintf(stderr, "ERROR: Not enough image data to encode\n");
+        return e_failure;
     }
 
-    // step 3: write modified buffer to stego image
-    fwrite(image_buffer, sizeof(char), size, fptr_stego_image);
+    // step 2: encode each byte into 8 image bytes
+    for (int i = 0; i < size; i++) {
+        encode_byte_to_lsb(data[i], &image_buffer[i * 8]);
+    }
 
+    // step 3: write modified buffer back (size*8 bytes)
+    fwrite(image_buffer, sizeof(char), size * 8, fptr_stego_image);
+    printf("INFO: Encoded %d bytes of data into image\n", size);
     return e_success;
 }
 
 
 
-Status encode_byte_to_lsb(char data, char *image_buffer){
 
+
+Status encode_byte_to_lsb(char data, char *image_buffer){
     for (int i = 0; i < 8; i++)
     {
         // step 1: clear the LSB of image buffer
@@ -209,6 +250,7 @@ Status encode_byte_to_lsb(char data, char *image_buffer){
 
         // step 2: set the LSB of image buffer to data
         *image_buffer |= ((data >> (7 - i)) & 0x01);
+        printf("INFO: Encoding bit %d of byte %c into image byte %d\n", 7 - i, data, *image_buffer);
 
         // step 3: move to next byte in image buffer
         image_buffer++;
@@ -226,6 +268,44 @@ Status encode_magic_string(const char *magic_string, EncodeInfo *encInfo){
         fprintf(stderr, "ERROR: Encoding magic string failed\n");
         return e_failure;
     }
+    //printf("INFO: Magic string encoded successfully\n");
 
     return e_success;
+}
+
+Status encode_secret_file_size(long file_size, EncodeInfo *encInfo){
+    // step 1: encode the secret file size to the image
+    if (encode_data_to_image((const char *)&file_size, sizeof(long), encInfo->fptr_src_image, encInfo->fptr_stego_image) == e_failure){
+        fprintf(stderr, "ERROR: Encoding secret file size failed\n");
+        return e_failure;
+    }
+    //printf("INFO: Secret file size encoded successfully\n");
+
+    return e_success;
+}
+
+Status encode_secret_file_data(EncodeInfo *encInfo){
+    // step 1: get the size of the secret file
+    long secret_size = encInfo->size_secret_file;
+
+    // step 2: encode the secret file data to the image
+    if (encode_data_to_image(encInfo->secret_fname, secret_size, encInfo->fptr_src_image, encInfo->fptr_stego_image) == e_failure){
+        fprintf(stderr, "ERROR: Encoding secret file data failed\n");
+        return e_failure;
+    }
+    //printf("INFO: Secret file data encoded successfully\n");
+
+    return e_success;
+}
+
+Status copy_remaining_img_data(FILE *fptr_src, FILE *fptr_dest){
+    char buffer[1024];
+    size_t bytes_read;
+
+    while ((bytes_read = fread(buffer, sizeof(char), sizeof(buffer), fptr_src)) > 0)
+    {
+        fwrite(buffer, sizeof(char), bytes_read, fptr_dest);
+    }
+
+    return e_success;   
 }
