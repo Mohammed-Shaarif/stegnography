@@ -7,14 +7,6 @@
 
 /* Function Definitions */
 
-OperationType check_operation_type(char c){
-    if (c == 'e')
-        return e_encode;
-    else if (c == 'd')
-        return e_decode;
-    else
-        return e_unsupported;
-}
 
 
 Status read_and_validate_encode_args(char *argv[], EncodeInfo *encInfo){
@@ -26,8 +18,15 @@ Status read_and_validate_encode_args(char *argv[], EncodeInfo *encInfo){
         fprintf(stderr, "ERROR: Source image must be a BMP file\n");
         return e_failure;
     }
+    memset(encInfo->extn_secret_file, 0, MAX_FILE_SUFFIX);
 
     encInfo->secret_fname = argv[3];
+    strcpy(encInfo->extn_secret_file,strrchr(encInfo->secret_fname, '.'));
+    if(encInfo->extn_secret_file == NULL){
+        fprintf(stderr, "ERROR: Secret file must have an extension\n");
+        return e_failure;
+    }
+    printf("INFO: Secret file extension is %s\n", encInfo->extn_secret_file);
     if(argv[4] == NULL){
         encInfo->stego_image_fname = "output.bmp";
         printf("INFO: Stego Image File Name not provided, using default: %s\n", encInfo->stego_image_fname);
@@ -101,8 +100,6 @@ Status check_capacity(EncodeInfo *encInfo){
     }
     return e_success;
 }
-
-
 
 /*  * Get File pointers for i/p and o/p files
  * Inputs: Src Image file, Secret file and
@@ -178,10 +175,22 @@ Status do_encoding(EncodeInfo *encInfo){
     printf("INFO: Magic string encoded successfully\n");
 
     // step 4: encode secret file extension size
+    if(encode_secret_file_extn_size(encInfo->extn_secret_file, encInfo) == e_failure){
+        fprintf(stderr, "ERROR: Encoding secret file extension size failed\n");
+        return e_failure;
+    }
+    sleep(1);
+    printf("INFO: Secret file extension size encoded successfully\n");
 
     // step 5: encode secret file extension
+    if(encode_secret_file_extn(encInfo->extn_secret_file, encInfo) == e_failure){
+        fprintf(stderr, "ERROR: Encoding secret file extension failed\n");
+        return e_failure;
+    }
+    sleep(1);
+    printf("INFO: Secret file extension encoded successfully\n");
 
-    
+
     // step 6: encode secret file size
     if(encode_secret_file_size(encInfo->size_secret_file, encInfo) == e_failure){
         fprintf(stderr, "ERROR: Encoding secret file size failed\n");
@@ -208,16 +217,6 @@ Status do_encoding(EncodeInfo *encInfo){
     return e_success;
 }
 
-Status copy_bmp_header(FILE *fptr_src_image, FILE *fptr_dest_image){
-    char header[54];
-    rewind(fptr_src_image);
-    rewind(fptr_dest_image);
-    fread(header, sizeof(char), 54, fptr_src_image);
-    fwrite(header, sizeof(char), 54, fptr_dest_image);
-
-    return e_success;
-}
-
 Status encode_data_to_image(const char *data, int size,FILE *fptr_src_image, FILE *fptr_stego_image){
     // step 1: read size*8 bytes from src image
     char image_buffer[size * 8];
@@ -238,10 +237,6 @@ Status encode_data_to_image(const char *data, int size,FILE *fptr_src_image, FIL
     return e_success;
 }
 
-
-
-
-
 Status encode_byte_to_lsb(char data, char *image_buffer){
     for (int i = 0; i < 8; i++)
     {
@@ -250,13 +245,23 @@ Status encode_byte_to_lsb(char data, char *image_buffer){
 
         // step 2: set the LSB of image buffer to data
         *image_buffer |= ((data >> (7 - i)) & 0x01);
-        printf("INFO: Encoding bit %d of byte %c into image byte %d\n", 7 - i, data, *image_buffer);
+        //printf("INFO: Encoding bit %d of byte %c into image byte %d\n", 7 - i, data, *image_buffer);
 
         // step 3: move to next byte in image buffer
         image_buffer++;
     }
     return e_success;
 
+}
+
+Status copy_bmp_header(FILE *fptr_src_image, FILE *fptr_dest_image){
+    char header[54];
+    rewind(fptr_src_image);
+    rewind(fptr_dest_image);
+    fread(header, sizeof(char), 54, fptr_src_image);
+    fwrite(header, sizeof(char), 54, fptr_dest_image);
+
+    return e_success;
 }
 
 Status encode_magic_string(const char *magic_string, EncodeInfo *encInfo){
@@ -269,6 +274,38 @@ Status encode_magic_string(const char *magic_string, EncodeInfo *encInfo){
         return e_failure;
     }
     //printf("INFO: Magic string encoded successfully\n");
+
+    return e_success;
+}
+
+Status encode_secret_file_extn_size(const char *file_extn, EncodeInfo *encInfo){
+    // step 1: get the size of the file extension
+    int extn_size = strlen(file_extn);
+
+    // step 2: encode the file extension size to the image
+    if (encode_data_to_image((const char *)&extn_size, sizeof(int), encInfo->fptr_src_image, encInfo->fptr_stego_image) == e_failure){
+        fprintf(stderr, "ERROR: Encoding secret file extension size failed\n");
+        return e_failure;
+    }
+    //printf("INFO: Secret file extension size encoded successfully\n");
+
+    return e_success;
+}
+
+Status encode_secret_file_extn(const char *file_extn, EncodeInfo *encInfo){
+    // step 1: get the size of the file extension
+    int extn_size = strlen(file_extn);
+    if (extn_size > MAX_FILE_SUFFIX) {
+        extn_size = MAX_FILE_SUFFIX;
+        fprintf(stderr, "WARNING: Secret file extension size exceeds maximum limit, truncating to %d characters\n", MAX_FILE_SUFFIX);
+    }
+
+    // step 2: encode the file extension to the image
+    if (encode_data_to_image(file_extn, extn_size, encInfo->fptr_src_image, encInfo->fptr_stego_image) == e_failure){
+        fprintf(stderr, "ERROR: Encoding secret file extension failed\n");
+        return e_failure;
+    }
+    //printf("INFO: Secret file extension encoded successfully\n");
 
     return e_success;
 }
