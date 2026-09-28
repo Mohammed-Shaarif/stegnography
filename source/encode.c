@@ -5,6 +5,21 @@
 #include "common.h"
 #include <unistd.h>
 
+
+void encoding_help_menu(char *argv[]){
+    char *program_name = strrchr(argv[0], '/')?strrchr(argv[0], '/') : strrchr(argv[0], '\\');
+    if (program_name != NULL) {
+        program_name++;
+    } else {
+        program_name = argv[0];
+    }
+    printf("Usage:\n\t%s -e <source_image.bmp> <secret_file> [<output_stego_image.bmp>]\n\n", program_name);
+    printf("Options:\n");
+    printf("\t-e <source_image.bmp> <secret_file> [<output_stego_image.bmp>]\t\tSpecify the source BMP image file and the secret file to encode.\n");
+    printf("\t\t\t\t\t\t\t\t\t\tOptional. Specify the name of the output stego image. If not provided, defaults to 'stego_image.bmp'.\n\n");
+    printf("Example:\n");
+    printf("\t%s -e source_image.bmp secret.txt stego_image.bmp\n\n", program_name);
+}
 /* Function Definitions */
 Status read_and_validate_encode_args(char *argv[], EncodeInfo *encInfo){
     // step 1: validate arguments
@@ -28,8 +43,12 @@ Status read_and_validate_encode_args(char *argv[], EncodeInfo *encInfo){
         encInfo->stego_image_fname = "output.bmp";
         printf("INFO: Stego Image File Name not provided, using default: %s\n", encInfo->stego_image_fname);
     }
-    else
-        encInfo->stego_image_fname = argv[4];
+    else{
+        char *stego_image_fname = argv[4];
+        stego_image_fname[strrchr(stego_image_fname, '.') - stego_image_fname] = '\0';
+        strcat(stego_image_fname, ".bmp");
+        encInfo->stego_image_fname = stego_image_fname;
+    }
 
     if(strlen(encInfo->stego_image_fname) < 5 || strcmp(&encInfo->stego_image_fname[strlen(encInfo->stego_image_fname)-4], ".bmp") != 0){
         fprintf(stderr, "ERROR: output image must be a BMP file\n");
@@ -105,7 +124,7 @@ Status check_capacity(EncodeInfo *encInfo){
  */
 Status open_files(EncodeInfo *encInfo){
     // Src Image file
-    encInfo->fptr_src_image = fopen(encInfo->src_image_fname, "r");
+    encInfo->fptr_src_image = fopen(encInfo->src_image_fname, "rb");
     // Do Error handling
     if (encInfo->fptr_src_image == NULL)
     {
@@ -127,7 +146,7 @@ Status open_files(EncodeInfo *encInfo){
     }
 
     // Stego Image file
-    encInfo->fptr_stego_image = fopen(encInfo->stego_image_fname, "w");
+    encInfo->fptr_stego_image = fopen(encInfo->stego_image_fname, "wb");
     // Do Error handling
     if (encInfo->fptr_stego_image == NULL)
     {
@@ -142,6 +161,12 @@ Status open_files(EncodeInfo *encInfo){
 }
 
 Status do_encoding(EncodeInfo *encInfo){
+    // check meta data for bmp for BM tag
+    if (fgetc(encInfo->fptr_src_image) != 'B' || fgetc(encInfo->fptr_src_image) != 'M'){
+        fprintf(stderr, "ERROR: Source image is not a valid BMP file\n");
+        return e_failure;
+    }
+    fseek(encInfo->fptr_src_image, 0, SEEK_SET);
     // step 1: check capacity
     encInfo->image_capacity = get_image_size_for_bmp(encInfo->fptr_src_image);
     encInfo->size_secret_file = get_file_size(encInfo->fptr_secret);

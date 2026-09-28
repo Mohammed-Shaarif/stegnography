@@ -5,7 +5,20 @@
 #include "common.h"
 #include <unistd.h>
 
-
+void decoding_help_menu(char *argv[]){
+    char *program_name = strrchr(argv[0], '/')?strrchr(argv[0], '/') : strrchr(argv[0], '\\');
+    if (program_name != NULL) {
+        program_name++;
+    } else {
+        program_name = argv[0];
+    }
+    printf("\nUsage:\n\t./%s -d <source_image.bmp> [<output_secret_file>]\n\n", program_name);
+    printf("Options:\n");
+    printf("\t-d <source_image.bmp> [<output_secret_file>]\t\tSpecify the source BMP image file to decode.\n");
+    printf("\t\t\t\t\t\t\t\tOptional. Specify the name of the output secret file. If not provided, defaults to 'output_secret_file'.\n\n");
+    printf("Example:\n");
+    printf("\t./%s -d stego_image.bmp secret_output.txt\n", program_name);
+}
 
 Status read_and_validate_decode_args(char *argv[], DecodeInfo *decInfo){
     // step 1: validate arguments
@@ -24,8 +37,9 @@ Status read_and_validate_decode_args(char *argv[], DecodeInfo *decInfo){
     else{
         // remove the file extension from the secret file name if provided
         char *secret_fname = argv[3];
-        if(strlen(secret_fname) > 4 && secret_fname[strlen(secret_fname)-4] == '.'){
-            secret_fname[strlen(secret_fname)-4] = '\0';
+        char *dot = strrchr(secret_fname, '.');
+        if (dot != NULL) {
+            *dot = '\0';
             decInfo->secret_fname = secret_fname;
         }
         else{   
@@ -47,7 +61,7 @@ Status read_and_validate_decode_args(char *argv[], DecodeInfo *decInfo){
 }
 
 Status open_decode_files(DecodeInfo *decInfo){
-    decInfo->fptr_src_image = fopen(decInfo->src_image_fname, "r");
+    decInfo->fptr_src_image = fopen(decInfo->src_image_fname, "rb");
     if (decInfo->fptr_src_image == NULL)
     {
     	perror("fopen");
@@ -59,6 +73,12 @@ Status open_decode_files(DecodeInfo *decInfo){
 }
 
 Status do_decoding(DecodeInfo *decInfo){
+
+    if(fgetc(decInfo->fptr_src_image) != 'B' || fgetc(decInfo->fptr_src_image) != 'M'){
+        fprintf(stderr, "ERROR: Source image is not a valid BMP file\n");
+        return e_failure;
+    }
+    fseek(decInfo->fptr_src_image, 0, SEEK_SET);
     // step 1: open files
     printf("INFO: Files opened successfully\n");
       
@@ -211,6 +231,7 @@ Status decode_secret_file_extn(const char *file_extn, DecodeInfo *decInfo){
         return e_failure;
     }
     strcpy(decInfo->extn_secret_file, file_extn);
+    decInfo->extn_secret_file[decInfo->extn_size] = '\0'; // Null-terminate the string
 
     return e_success;
 }

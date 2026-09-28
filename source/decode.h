@@ -25,7 +25,7 @@ typedef struct DecodeInfo{
     /* Secret File Info */
     char *secret_fname;
     FILE *fptr_secret;
-    char extn_secret_file[MAX_FILE_SUFFIX];
+    char extn_secret_file[MAX_FILE_SUFFIX+1];
     char secret_data[MAX_SECRET_BUF_SIZE];
     long size_secret_file;
     int extn_size;
@@ -60,5 +60,7 @@ Status decode_byte_from_lsb(char data, char *image_buffer);
 Status decode_int_data_from_image(char *data, int size, FILE *fptr_src_image);
 
 Status create_secret_file(DecodeInfo *decInfo);
+
+void decoding_help_menu(char *argv[]);
 #endif
 
