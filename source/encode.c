@@ -6,9 +6,6 @@
 #include <unistd.h>
 
 /* Function Definitions */
-
-
-
 Status read_and_validate_encode_args(char *argv[], EncodeInfo *encInfo){
     // step 1: validate arguments
     encInfo->src_image_fname = argv[2];
@@ -86,7 +83,6 @@ uint get_file_size(FILE *fptr){
     return (uint)size;
 }
 
-
 Status check_capacity(EncodeInfo *encInfo){
     // step 1: check if image has enough capacity in bits to hold secret data
     // magic string + secret file size + extension size + extension + secret data
@@ -144,8 +140,6 @@ Status open_files(EncodeInfo *encInfo){
     // No failure return e_success
     return e_success;
 }
-
-
 
 Status do_encoding(EncodeInfo *encInfo){
     // step 1: check capacity
@@ -312,8 +306,6 @@ Status encode_data_int_to_image(int num, FILE *fptr_src_image, FILE *fptr_stego_
     fwrite(image_buffer, sizeof(char), sizeof(int) * 8, fptr_stego_image);
     return e_success;
 }
-
-
 
 Status encode_secret_file_extn(const char *file_extn, EncodeInfo *encInfo){
     int extn_size = strlen(file_extn);

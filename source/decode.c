@@ -124,13 +124,11 @@ Status do_decoding(DecodeInfo *decInfo){
 
 }
 
-
 Status skip_bmp_header(FILE *fptr_src_image){
     // step 1: skip bmp header
     fseek(fptr_src_image, 54, SEEK_SET);
     return e_success;
 }
-
 
 Status decode_magic_string(const char *magic_string, DecodeInfo *decInfo){
     // step 1: decode the magic string from the image
@@ -143,7 +141,6 @@ Status decode_magic_string(const char *magic_string, DecodeInfo *decInfo){
     //printf("INFO: Magic string decoded successfully\n");
     return e_success;
 }
-
 
 Status decode_data_from_image(const char *data, int size, FILE *fptr_src_image){
     // step 1: read the image data
@@ -164,8 +161,6 @@ Status decode_data_from_image(const char *data, int size, FILE *fptr_src_image){
 
     return e_success;
 }
-
-
 
 Status decode_byte_from_lsb(char data, char *image_buffer){
     // step 1: extract the least significant bit from the image buffer
@@ -209,7 +204,6 @@ Status decode_int_data_from_image(char *data, int size, FILE *fptr_src_image) {
     return e_success;
 }
 
-
 Status decode_secret_file_extn(const char *file_extn, DecodeInfo *decInfo){
     // step 1: decode the secret file extension from the image
     if (decode_data_from_image(file_extn, decInfo->extn_size, decInfo->fptr_src_image) == e_failure){
@@ -220,7 +214,6 @@ Status decode_secret_file_extn(const char *file_extn, DecodeInfo *decInfo){
 
     return e_success;
 }
-
 
 Status decode_secret_file_size(DecodeInfo *decInfo){
     // step 1: decode the secret file size from the image
@@ -246,7 +239,6 @@ Status decode_secret_file_data(DecodeInfo *decInfo){
 
     return e_success;
 }
-
 
 Status create_secret_file(DecodeInfo *decInfo){
     char secret_file_name[100];

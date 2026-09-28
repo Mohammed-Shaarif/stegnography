@@ -14,8 +14,7 @@
 #define MAX_IMAGE_BUF_SIZE (MAX_SECRET_BUF_SIZE * 8)
 #define MAX_FILE_SUFFIX 4
 
-typedef struct _EncodeInfo
-{
+typedef struct _EncodeInfo{
     /* Source Image info */
     char *src_image_fname;
     FILE *fptr_src_image;
