@@ -383,3 +383,19 @@ Status copy_remaining_img_data(FILE *fptr_src, FILE *fptr_dest){
 
     return e_success;   
 }
+
+Status close_files(EncodeInfo *encInfo){
+    if (encInfo->fptr_src_image != NULL) {
+        fclose(encInfo->fptr_src_image);
+        encInfo->fptr_src_image = NULL;
+    }
+    if (encInfo->fptr_secret != NULL) {
+        fclose(encInfo->fptr_secret);
+        encInfo->fptr_secret = NULL;
+    }
+    if (encInfo->fptr_stego_image != NULL) {
+        fclose(encInfo->fptr_stego_image);
+        encInfo->fptr_stego_image = NULL;
+    }
+    return e_success;
+}

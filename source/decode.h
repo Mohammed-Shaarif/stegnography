@@ -62,5 +62,7 @@ Status decode_int_data_from_image(char *data, int size, FILE *fptr_src_image);
 Status create_secret_file(DecodeInfo *decInfo);
 
 void decoding_help_menu(char *argv[]);
+
+Status close_decode_files(DecodeInfo *decInfo);
 #endif
 

@@ -275,3 +275,17 @@ Status create_secret_file(DecodeInfo *decInfo){
     }
     return e_success;
 }
+
+
+Status close_decode_files(DecodeInfo *decInfo){
+    if (decInfo->fptr_src_image != NULL) {
+        fclose(decInfo->fptr_src_image);
+        decInfo->fptr_src_image = NULL;
+    }
+    if (decInfo->fptr_secret != NULL) {
+        fclose(decInfo->fptr_secret);
+        decInfo->fptr_secret = NULL;
+    }
+
+    return e_success;
+}

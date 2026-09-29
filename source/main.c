@@ -40,6 +40,8 @@ int main(int argc, char *argv[]){
         }
         printf("SUCCESS: Encoding completed successfully\n");
 
+        close_files(&encInfo);
+
 
     }
     else if(operation_type == e_decode){
@@ -64,6 +66,7 @@ int main(int argc, char *argv[]){
         }
         printf("SUCCESS: Decoding completed successfully\n");
 
+        close_decode_files(&decInfo);
     }
     else{
         printf("ERROR: Operation Type is Unsupported\n");

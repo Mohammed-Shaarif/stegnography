@@ -87,4 +87,6 @@ Status copy_remaining_img_data(FILE *fptr_src, FILE *fptr_dest);
 Status encode_data_int_to_image(int num, FILE *fptr_src_image, FILE *fptr_stego_image);
 
 void encoding_help_menu(char *argv[]);
+
+Status close_files(EncodeInfo *encInfo);
 #endif
